@@ -1,0 +1,128 @@
+<!DOCTYPE html>
+<html lang="en">
+	<head>
+		<meta charset="UTF-8" />
+		<meta name="viewport" content="width=device-width, initial-scale=1.0" />
+		<style>
+			body {
+				display: flex;
+				justify-content: center;
+				align-items: center;
+				height: 100vh;
+				margin: 0;
+				background-color: #f0f0f0;
+			}
+			#body {
+				display: flex;
+				justify-content: center;
+				align-items: center;
+				height: 100vh;
+				margin: 0;
+				background-color: #f0f0f0;
+			}
+
+			.player {
+				width: 50px;
+				height: 50px;
+				background-color: blue;
+				position: relative;
+				margin: 10px;
+			}
+
+			#player2 {
+				background-color: red;
+			}
+		</style>
+		<title>Simple Two-Player Game</title>
+	</head>
+	<body>
+		<div id="body"></div>
+		<script src="/socket.io/socket.io.js"></script>
+		<script>
+			let playerElement, playerData
+			const PLAYER_SPEED = 10
+			let playerPosition = 0
+
+			const socket = io()
+
+			// emit join
+			socket.emit("join", "player1")
+
+			socket.on("newplayer-joined", data => {
+				console.log("new player joined", data)
+				const { id, name } = data
+				// create new player element
+				const playerDivElement = document.createElement("div")
+				playerDivElement.style.backgroundColor = "rgb(228, 67, 67)"
+				playerDivElement.classList.add("player")
+				playerDivElement.id = name
+				// create a child element of the div elementa and show the player id
+				const playerElementId = document.createElement("p")
+				playerElementId.innerText = id
+				playerDivElement.appendChild(playerElementId)
+				// append the player element to the body
+				document.getElementById("body").appendChild(playerDivElement)
+
+				playerElement = document.getElementById(name)
+				playerData = {
+					id,
+					name,
+				}
+			})
+
+			function updatePositions() {
+				playerElement.style.top = playerPosition + "px"
+				// player2.style.top = player2Position + "px"
+			}
+
+			document.addEventListener("keydown", event => {
+				const key = event.key
+				if (key === "ArrowUp") {
+					playerPosition = Math.max(playerPosition - PLAYER_SPEED, 0)
+					socket.emit("player-state-change", {
+						...playerData,
+						y: playerPosition,
+					})
+				} else if (key === "ArrowDown") {
+					playerPosition = Math.min(
+						playerPosition + PLAYER_SPEED,
+						window.innerHeight - 50
+					)
+					socket.emit("player-state-change", {
+						...playerData,
+						y: playerPosition,
+					})
+				}
+
+				updatePositions()
+			})
+
+			// show all players
+			socket.on("show-all-players", data => {
+				console.log("show all players", data)
+				const { players } = data
+				players.forEach(player => {
+					const { id, name, y } = player
+					// create new player element
+					const playerElement = document.createElement("div")
+					playerElement.style.backgroundColor = "rgb(228, 67, 67)"
+					playerElement.classList.add("player")
+					playerElement.id = name
+					// create a child element of the div elementa and show the player id
+					const playerElementId = document.createElement("p")
+					playerElementId.innerText = id
+					playerElement.appendChild(playerElementId)
+					// append the player element to the body
+					document.getElementById("body").appendChild(playerElement)
+					// update the y of the player
+					playerElement.style.top = y + "px"
+				})
+			})
+
+			// on error
+			socket.on("error", message => {
+				alert(message)
+			})
+		</script>
+	</body>
+</html>
